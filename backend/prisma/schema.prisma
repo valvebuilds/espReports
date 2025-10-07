@@ -1,0 +1,184 @@
+// ----------------------------------------------------
+// Herramienta de Gestión de Horas Extra y Compensatorios
+// Autor: valerie álvarez
+// Fecha: 2025-10-07
+// ----------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------
+// ENUMS
+// ----------------------------------------------------
+
+enum DiaSemana {
+  LUNES
+  MARTES
+  MIERCOLES
+  JUEVES
+  VIERNES
+  SABADO
+  DOMINGO
+}
+
+enum TipoTurno {
+  ACUEDUCTO
+  ASEO
+  ALCANTARILLADO
+  PTAR_DIURNO
+  PTAR_NOCTURNO
+  PTAR_FIN_DE_SEMANA
+}
+
+enum TipoRecargo {
+  EXTRA_DIURNO
+  NOCTURNO
+  DOMINICAL
+  FESTIVO
+}
+
+enum EstadoRegistro {
+  PENDIENTE
+  COMPENSADO
+}
+
+enum Roles {
+  ADMIN
+  COORDINADOR
+}
+
+// ----------------------------------------------------
+// MODELOS BASE
+// ----------------------------------------------------
+
+model Usuario {
+  id           Int       @id @default(autoincrement())
+  nombre       String
+  usuario      String    @unique
+  contrasena   String
+  rol          Roles
+  empleado     Empleado?
+  creadoEn     DateTime  @default(now())
+  actualizadoEn DateTime @updatedAt
+}
+
+model Area {
+  id            Int         @id @default(autoincrement())
+  nombre        String
+  coordinadorId Int?
+  coordinador   Usuario?    @relation("CoordinadorArea", fields: [coordinadorId], references: [id])
+  empleados     Empleado[]
+  turnos        Turno[]
+  activo        Boolean     @default(true)
+  creadoEn      DateTime    @default(now())
+  actualizadoEn DateTime    @updatedAt
+}
+
+model Empleado {
+  id             Int             @id @default(autoincrement())
+  nombre         String
+  cedula         String          @unique
+  areaId         Int
+  area           Area            @relation(fields: [areaId], references: [id])
+  usuario        Usuario?
+  turnos         Turno[]
+  registros      Registro[]
+  compensatorios Compensatorio[]
+  activo         Boolean         @default(true)
+  creadoEn       DateTime        @default(now())
+  actualizadoEn  DateTime        @updatedAt
+}
+
+// ----------------------------------------------------
+// TURNOS Y HORARIOS
+// ----------------------------------------------------
+
+model Turno {
+  id         Int          @id @default(autoincrement())
+  tipoTurno  TipoTurno
+  horarios   Horario[]
+  activo     Boolean      @default(true)
+  creadoEn   DateTime     @default(now())
+  actualizadoEn DateTime  @updatedAt
+}
+
+model Horario {
+  id          Int        @id @default(autoincrement())
+  turnoId     Int
+  turno       Turno      @relation(fields: [turnoId], references: [id])
+  diaSemana   DiaSemana
+  horaInicio  Time
+  horaFin     Time
+}
+
+// ----------------------------------------------------
+// PARAMETROS DE RECARGOS
+// ----------------------------------------------------
+
+model ParametroRecargo {
+  id           Int          @id @default(autoincrement())
+  tipoRecargo  TipoRecargo
+  porcentaje   Float
+  horaInicio   Time
+  horaFin      Time
+  diaSemana    DiaSemana?
+  activo       Boolean      @default(true)
+  creadoEn     DateTime     @default(now())
+  actualizadoEn DateTime    @updatedAt
+}
+
+// ----------------------------------------------------
+// REGISTRO DE HORAS EXTRA
+// ----------------------------------------------------
+
+model Registro {
+  id             Int                @id @default(autoincrement())
+  empleadoId     Int
+  empleado       Empleado           @relation(fields: [empleadoId], references: [id])
+  horaInicio     DateTime
+  horaFin        DateTime
+  horasExtra     Float
+  motivo         String?
+  nroSolicitud   String?
+  estado         EstadoRegistro     @default(PENDIENTE)
+  creadoEn       DateTime           @default(now())
+  actualizadoEn  DateTime           @updatedAt
+  autorizadoPorId Int?
+  autorizadoPor   Usuario?          @relation("AutorizadorRegistro", fields: [autorizadoPorId], references: [id])
+
+  // Relaciones
+  recargos       RegistroRecargo[]
+  compensatorio  Compensatorio?
+}
+
+// Relación N:M entre Registro y Tipo de Recargo
+model RegistroRecargo {
+  id             Int          @id @default(autoincrement())
+  registroId     Int
+  registro       Registro     @relation(fields: [registroId], references: [id])
+  tipoRecargo    TipoRecargo
+  porcentaje     Float
+  horasAplicadas Float
+}
+
+// ----------------------------------------------------
+// REPORTE DE TIEMPOS COMPENSATORIOS
+// ----------------------------------------------------
+
+model Compensatorio {
+  id                 Int          @id @default(autoincrement())
+  registroId         Int          @unique
+  registro           Registro     @relation(fields: [registroId], references: [id])
+  fechaCompensacion  DateTime?
+  horasCompensadas   Float
+  horasPendientes    Float
+  motivo             String?
+  creadoEn           DateTime     @default(now())
+  actualizadoEn      DateTime     @updatedAt
+}
