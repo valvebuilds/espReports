@@ -51,6 +51,7 @@ enum EstadoRegistro {
 enum Roles {
   ADMIN
   COORDINADOR
+  EMPLEADO
 }
 
 // ----------------------------------------------------
@@ -63,7 +64,8 @@ model Usuario {
   usuario      String    @unique
   contrasena   String
   rol          Roles
-  empleado     Empleado?
+  coordinador  Area[]   @relation("CoordinadorArea") 
+  autorizaciones    Registro[]  @relation("AutorizadorRegistro")
   creadoEn     DateTime  @default(now())
   actualizadoEn DateTime @updatedAt
 }
@@ -74,7 +76,7 @@ model Area {
   coordinadorId Int?
   coordinador   Usuario?    @relation("CoordinadorArea", fields: [coordinadorId], references: [id])
   empleados     Empleado[]
-  turnos        Turno[]
+  turnos        Turno[]     @relation("TurnosArea")
   activo        Boolean     @default(true)
   creadoEn      DateTime    @default(now())
   actualizadoEn DateTime    @updatedAt
@@ -86,10 +88,9 @@ model Empleado {
   cedula         String          @unique
   areaId         Int
   area           Area            @relation(fields: [areaId], references: [id])
-  usuario        Usuario?
-  turnos         Turno[]
+  turnos         Turno[]          @relation("TurnosEmpleado")
   registros      Registro[]
-  compensatorios Compensatorio[]
+  compensatorios Compensatorio[] @relation("CompensatoriosEmpleado")
   activo         Boolean         @default(true)
   creadoEn       DateTime        @default(now())
   actualizadoEn  DateTime        @updatedAt
@@ -101,6 +102,10 @@ model Empleado {
 
 model Turno {
   id         Int          @id @default(autoincrement())
+  areaId     Int?
+  area       Area?       @relation("TurnosArea", fields: [areaId], references: [id])
+  empleadoId Int?
+  empleado    Empleado? @relation("TurnosEmpleado", fields: [empleadoId], references: [id])
   tipoTurno  TipoTurno
   horarios   Horario[]
   activo     Boolean      @default(true)
@@ -113,8 +118,9 @@ model Horario {
   turnoId     Int
   turno       Turno      @relation(fields: [turnoId], references: [id])
   diaSemana   DiaSemana
-  horaInicio  Time
-  horaFin     Time
+  horaInicio  DateTime
+  horaFin    DateTime
+  activo      Boolean
 }
 
 // ----------------------------------------------------
@@ -125,8 +131,8 @@ model ParametroRecargo {
   id           Int          @id @default(autoincrement())
   tipoRecargo  TipoRecargo
   porcentaje   Float
-  horaInicio   Time
-  horaFin      Time
+  horaInicio  DateTime
+  horaFin     DateTime
   diaSemana    DiaSemana?
   activo       Boolean      @default(true)
   creadoEn     DateTime     @default(now())
@@ -143,7 +149,10 @@ model Registro {
   empleado       Empleado           @relation(fields: [empleadoId], references: [id])
   horaInicio     DateTime
   horaFin        DateTime
-  horasExtra     Float
+  horasTotales   Float
+  horasDiurnas   Float
+  horasNocturnas Float
+  horasDomin     Float
   motivo         String?
   nroSolicitud   String?
   estado         EstadoRegistro     @default(PENDIENTE)
@@ -175,6 +184,8 @@ model Compensatorio {
   id                 Int          @id @default(autoincrement())
   registroId         Int          @unique
   registro           Registro     @relation(fields: [registroId], references: [id])
+  empleadoId          Int
+  empleado           Empleado     @relation("CompensatoriosEmpleado", fields: [empleadoId], references: [id])
   fechaCompensacion  DateTime?
   horasCompensadas   Float
   horasPendientes    Float
