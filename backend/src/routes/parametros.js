@@ -8,5 +8,6 @@ const router = express.Router();
 // Define routes
 router.get('/', requireAuth, requireRole('ADMIN'), parametroController.getAllParametros);
 router.post('/', requireAuth, requireRole('ADMIN'), parametroController.createParametro);
+router.put('/:id', requireAuth, requireRole('ADMIN'), parametroController.updateParametro);
 
 export default router

@@ -5,11 +5,12 @@ const getAllCompensatorios = async () => {
   return await prisma.compensatorio.findMany();
 };
 
+//Obtener compensatorios por área
 const getCompensatorioByArea = async (areas) => {
     const compensatorios = await prisma.compensatorio.findMany({
-      where: { empleado: { areaId: { in: areas } } },
+      where: { empleado: { areaId: { in: areas } } }, //Buscar solo los compensatorios de empleados que pertenezcan al área
       include: {
-        empleado: { select: { id: true, nombre: true, area: { 
+        empleado: { select: { id: true, nombre: true, area: { //Devuelve al empleado con su área
                 select: { id: true, nombre: true }
             }
           }
@@ -43,5 +44,6 @@ export default {
   createCompensatorio,
   getCompensatorioById,
   updateCompensatorio,
-  deleteCompensatorio
+  deleteCompensatorio,
+  getCompensatorioByArea
 };

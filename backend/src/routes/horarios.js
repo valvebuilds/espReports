@@ -6,7 +6,7 @@ import { requireRole } from '../middleware/roles.js';
 const router = express.Router();
 
 // Define routes
-router.get('/', requireAuth, horarioController.getAllHorarios);
+router.get('/', requireAuth, requireRole('ADMIN'), horarioController.getAllHorarios);
 router.post('/', requireAuth, requireRole('ADMIN'), horarioController.createHorario);
 router.put('/:id', requireAuth, requireRole('ADMIN'), horarioController.updateHorario);
 router.get('/:turnoId', requireAuth, horarioController.getHorarioByTurno);

@@ -8,6 +8,7 @@ const getAllRegistros = async () => {
 const createRegistro = async (data) => {
   return await prisma.registro.create({ data });
 };
+
 //Obtener Registro por id
 const getRegistroById = async (id) => {
   return await prisma.registro.findUnique({ where: { id: id } });

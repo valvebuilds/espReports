@@ -1,24 +1,43 @@
 import compensatorioService from "../services/compensatorioService.js";
 
-//Obtener todas las Compensatorios 
+//Obtener todas las Compensatorios SOLO PARA ADMINS
 const getAllCompensatorios = async (req, res) => {
   try {
     const compensatorios = await compensatorioService.getAllCompensatorios();
-    res.json(compensatorios);
+    return compensatorios;
   } catch (error) {
     res.status(500).json({ error: 'Error obteniendo Compensatorios' });
   }
 };
-
+//Obtener compensatorios por área
 const getCompensatorioByArea = async (req, res) => {
     try {
-        console.log(req.coordinadorAreas);
-        const area = req.coordinadorAreas;
-        const compensatorios = await compensatorioService.getCompensatorioByArea();
-        res.json(compensatorios);
+        const areasId = req.coordinadorAreas; 
+        const compensatorios = await compensatorioService.getCompensatorioByArea(areasId); 
+        return compensatorios;
     } catch (error) {
-        res.status(500).json({ error: `Error obteniendo Compensatorios del área: ${area}` });
+        console.error("Error en getCompensatorioByArea:", error);
+        // El error handling debe usar la variable 'areasId' ya modificada
+        const areasStr = Array.isArray(areasId) ? areasId.join(', ') : 'desconocida';
+        res.status(500).json({ error: `Error obteniendo Compensatorios del área(s): ${areasStr}` });
     }
+}
+//Determina cual función llamar según el rol
+const getCompensatorios = async (req, res) => {
+  const rol = req.user.role;
+  try {
+    if (rol == 'ADMIN'){
+      const compensatorios = await getAllCompensatorios(req, res);
+      res.json(compensatorios);
+    }
+    if (rol == 'COORDINADOR'){
+      const compensatorios = await getCompensatorioByArea(req, res);
+      res.json(compensatorios);
+    }
+  } catch (error) {
+    console.error("Error en getCompensatorios:", error);
+        res.status(500).json({ error: 'Error obteniendo Compensatorios' });
+  }
 }
 //Crear Compensatorio
 const createCompensatorio = async (req, res) => {
@@ -68,4 +87,5 @@ export default {
   updateCompensatorio,
   deleteCompensatorio,
   getCompensatorioByArea,
+  getCompensatorios
 };

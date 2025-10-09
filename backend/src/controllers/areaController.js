@@ -13,23 +13,11 @@ const getAllAreas = async (req, res) => {
 const createArea = async (req, res) => {
   try {
     const Area = await areaService.createArea(req.body);
+    
     res.status(201).json(Area);
   } catch (error) {
     res.status(400).json({ error: 'Error creando Área' });
   }
-};
-//Obtener Area por id
-const getAreaById = async (req, res) => {
-    try {
-        const Area = await areaService.getAreaById(req.params.id);
-        if (Area) {
-            res.json(Area);
-        } else {
-        res.status(404).json({ error: 'No se encontró el Área' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Error obteniendo el Área' });
-    }
 };
 //Actualizar Area
 const updateArea = async (req, res) => {
@@ -49,7 +37,19 @@ const deleteArea = async (req, res) => {
     res.status(400).json({ error: 'Error desactivando al Área' });
   }
 };
-
+//Obtener Area por id
+const getAreaById = async (req, res) => {
+    try {
+        const Area = await areaService.getAreaById(req.params.id);
+        if (Area) {
+            res.json(Area);
+        } else {
+        res.status(404).json({ error: 'No se encontró el Área' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: 'Error obteniendo el Área' });
+    }
+};
 export default {
   getAllAreas,
   createArea,

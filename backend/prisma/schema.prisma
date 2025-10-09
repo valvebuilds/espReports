@@ -118,8 +118,10 @@ model Horario {
   turnoId     Int
   turno       Turno      @relation(fields: [turnoId], references: [id])
   diaSemana   DiaSemana
-  horaInicio  DateTime
-  horaFin    DateTime
+  horaInicio  DateTime  @db.Time(3)
+  horaFin    DateTime   @db.Time(3)
+  horaDescanso DateTime  @db.Time(3)
+  duracionDescanso Float
   activo      Boolean
 }
 

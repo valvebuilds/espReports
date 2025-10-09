@@ -6,7 +6,7 @@ import { requireRole } from '../middleware/roles.js';
 const router = express.Router();
 
 // Define routes
-router.get('/', requireAuth, requireRole('ADMIN', 'COORDINADOR'), compensatorioController.getCompensatorioByArea);
+router.get('/', requireAuth, requireRole('ADMIN', 'COORDINADOR'), compensatorioController.getCompensatorios);
 router.post('/', requireAuth, requireRole('ADMIN', 'COORDINADOR'), compensatorioController.createCompensatorio);
 router.get('/:id', requireAuth, compensatorioController.getCompensatorioById);
 router.put('/:id', requireAuth, requireRole('ADMIN', 'COORDINADOR'), compensatorioController.updateCompensatorio);

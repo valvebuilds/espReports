@@ -4,13 +4,37 @@ import prisma from '../prisma/prismaClient.js';
 const getAllEmpleados = async () => {
   return await prisma.empleado.findMany({ where: {activo: true }});
 };
+
+const getEmpleadoByArea = async (areas) => {
+    const empleados = await prisma.empleado.findMany({
+        where: { 
+            areaId: { in: areas } 
+        },
+        include: {
+            area: true, // Incluye la información del área
+        }
+    });
+    return empleados;
+};
 //Crear empleado
 const createEmpleado = async (data) => {
   return await prisma.empleado.create({ data });
 };
-//Obtener empleado por id
+//Obtener empleado por id sin distincion de área: solo para ADMIN
 const getEmpleadoById = async (id) => {
-  return await prisma.empleado.findUnique({ where: { id: id } });
+  return await prisma.empleado.findUnique({ 
+    where: { id: id },
+    include: { area: true }
+  });
+};
+//Obtener empleado por id si es del área del coordinador
+const getEmpleadoByIdAndAreas = async (empleadoId, areasId) => {
+    return await prisma.empleado.findUnique({
+        where: {
+            id: parseInt(empleadoId),
+            areaId: { in: areasId } 
+        },   include: { area: true },
+    });
 };
 //Actualizar empleado
 const updateEmpleado = async (id, data) => {
@@ -29,5 +53,7 @@ export default {
     createEmpleado,
     getEmpleadoById,
     updateEmpleado,
-    deleteEmpleado
+    deleteEmpleado,
+    getEmpleadoByArea,
+    getEmpleadoByIdAndAreas
 }

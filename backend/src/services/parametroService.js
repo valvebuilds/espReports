@@ -10,16 +10,16 @@ const createParametro = async (data) => {
 };
 //Obtener Parametro por id
 const getParametroById = async (id) => {
-  return await prisma.parametroRecargo.findUnique({ where: { id: id } });
+  return await prisma.parametroRecargo.findUnique({ where: { id: parseInt(id) } });
 };
 //Actualizar Parametro
 const updateParametro = async (id, data) => {
-  return await prisma.parametroRecargo.update({ where: { id: id }, data });
+  return await prisma.parametroRecargo.update({ where: { id: parseInt(id) }, data });
 };
 // Desactivar Parametro (en vez de eliminarlo)
 const deleteParametro = async (id) => {
   return await prisma.parametroRecargo.update({
-    where: { id: id },
+    where: { id: parseInt(id) },
     data: { activo: false },
   });
 };
