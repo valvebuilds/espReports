@@ -17,6 +17,11 @@ datasource db {
 // ENUMS
 // ----------------------------------------------------
 
+enum EstadoLiquidacion {
+  PENDIENTE_DE_CIERRE
+  CERRADO_COMPENSADO 
+  CERRADO_LIQUIDADO 
+}
 enum DiaSemana {
   LUNES
   MARTES
@@ -25,15 +30,6 @@ enum DiaSemana {
   VIERNES
   SABADO
   DOMINGO
-}
-
-enum TipoTurno {
-  ACUEDUCTO
-  ASEO
-  ALCANTARILLADO
-  PTAR_DIURNO
-  PTAR_NOCTURNO
-  PTAR_FIN_DE_SEMANA
 }
 
 enum TipoRecargo {
@@ -45,6 +41,8 @@ enum TipoRecargo {
 
 enum EstadoRegistro {
   PENDIENTE
+  APROBADO
+  RECHAZADO
   COMPENSADO
 }
 
@@ -88,9 +86,8 @@ model Empleado {
   cedula         String          @unique
   areaId         Int
   area           Area            @relation(fields: [areaId], references: [id])
-  turnos         Turno[]          @relation("TurnosEmpleado")
   registros      Registro[]
-  compensatorios Compensatorio[] @relation("CompensatoriosEmpleado")
+  compensatorios  Compensatorio[]
   activo         Boolean         @default(true)
   creadoEn       DateTime        @default(now())
   actualizadoEn  DateTime        @updatedAt
@@ -101,28 +98,25 @@ model Empleado {
 // ----------------------------------------------------
 
 model Turno {
-  id         Int          @id @default(autoincrement())
-  areaId     Int?
-  area       Area?       @relation("TurnosArea", fields: [areaId], references: [id])
-  empleadoId Int?
-  empleado    Empleado? @relation("TurnosEmpleado", fields: [empleadoId], references: [id])
-  tipoTurno  TipoTurno
+  id              Int        @id @default(autoincrement())
+  nombreTurno     String     // PTAP Diurno, Acueducto Nocturno
+  areaId          Int
+  area            Area       @relation("TurnosArea", fields: [areaId], references: [id])
   horarios   Horario[]
+  registros  Registro[]
   activo     Boolean      @default(true)
   creadoEn   DateTime     @default(now())
   actualizadoEn DateTime  @updatedAt
 }
 
 model Horario {
-  id          Int        @id @default(autoincrement())
-  turnoId     Int
-  turno       Turno      @relation(fields: [turnoId], references: [id])
-  diaSemana   DiaSemana
-  horaInicio  DateTime  @db.Time(3)
-  horaFin    DateTime   @db.Time(3)
-  horaDescanso DateTime  @db.Time(3)
-  duracionDescanso Float
-  activo      Boolean
+  id              Int        @id @default(autoincrement())
+  turnoId         Int
+  turno           Turno      @relation(fields: [turnoId], references: [id])
+  diaSemana       DiaSemana
+  // Usamos String para TIME en la base de datos (PostgreSQL 'time without time zone')
+  horaInicio      String 
+  horaFin         String 
 }
 
 // ----------------------------------------------------
@@ -131,14 +125,18 @@ model Horario {
 
 model ParametroRecargo {
   id           Int          @id @default(autoincrement())
-  tipoRecargo  TipoRecargo
-  porcentaje   Float
-  horaInicio  DateTime
-  horaFin     DateTime
-  diaSemana    DiaSemana?
+  clave           String   @unique // Ej: 'HORA_INICIO_NOCTURNO', 'HORA_FIN_NOCTURNO'
+  valor           String   // Ej: '19:00:00', '06:00:00'
+  descripcion     String?
+  detalles     DetalleHoraExtra[]
   activo       Boolean      @default(true)
   creadoEn     DateTime     @default(now())
   actualizadoEn DateTime    @updatedAt
+}
+model DiaFestivo {
+  id          Int      @id @default(autoincrement())
+  fecha       DateTime @unique @db.Date // Solo la fecha es necesaria
+  nombre      String
 }
 
 // ----------------------------------------------------
@@ -146,36 +144,46 @@ model ParametroRecargo {
 // ----------------------------------------------------
 
 model Registro {
-  id             Int                @id @default(autoincrement())
-  empleadoId     Int
-  empleado       Empleado           @relation(fields: [empleadoId], references: [id])
+ id              Int              @id @default(autoincrement())
+  empleadoId      Int
+  empleado        Empleado         @relation(fields: [empleadoId], references: [id])
+  turnoId         Int // Turno asignado en el momento del registro
+  turno           Turno            @relation(fields: [turnoId], references: [id])
+  
   horaInicio     DateTime
   horaFin        DateTime
-  horasTotales   Float
-  horasDiurnas   Float
-  horasNocturnas Float
-  horasDomin     Float
+  
   motivo         String?
   nroSolicitud   String?
+  
   estado         EstadoRegistro     @default(PENDIENTE)
-  creadoEn       DateTime           @default(now())
-  actualizadoEn  DateTime           @updatedAt
   autorizadoPorId Int?
   autorizadoPor   Usuario?          @relation("AutorizadorRegistro", fields: [autorizadoPorId], references: [id])
+  
+  detallesExtra   DetalleHoraExtra[] // Las horas extra SEGMENTADAS y CLASIFICADAS
+  compensatorio   Compensatorio?
 
-  // Relaciones
-  recargos       RegistroRecargo[]
-  compensatorio  Compensatorio?
+  creadoEn       DateTime           @default(now())
+  actualizadoEn  DateTime           @updatedAt
+  @@index([empleadoId, horaInicio])
+  @@index([turnoId])
 }
-
-// Relación N:M entre Registro y Tipo de Recargo
-model RegistroRecargo {
-  id             Int          @id @default(autoincrement())
-  registroId     Int
-  registro       Registro     @relation(fields: [registroId], references: [id])
-  tipoRecargo    TipoRecargo
-  porcentaje     Float
-  horasAplicadas Float
+model DetalleHoraExtra {
+  id              Int           @id @default(autoincrement())
+  registroId      Int
+  registro        Registro      @relation(fields: [registroId], references: [id])
+  
+  // Intervalo de la Hora Extra específica (para auditoría)
+  fechaInicioHe   DateTime 
+  fechaFinHe      DateTime
+  
+  // Clasificación y Duración del segmento de HE
+  tipoRecargo     TipoRecargo
+  minutosAplicados Int // Duración exacta en minutos
+  
+  // Relación opcional con ParámetroRecargo para la tarifa aplicada
+  parametroId     Int?
+  parametro       ParametroRecargo? @relation(fields: [parametroId], references: [id])
 }
 
 // ----------------------------------------------------
@@ -183,15 +191,41 @@ model RegistroRecargo {
 // ----------------------------------------------------
 
 model Compensatorio {
-  id                 Int          @id @default(autoincrement())
-  registroId         Int          @unique
-  registro           Registro     @relation(fields: [registroId], references: [id])
-  empleadoId          Int
-  empleado           Empleado     @relation("CompensatoriosEmpleado", fields: [empleadoId], references: [id])
-  fechaCompensacion  DateTime?
-  horasCompensadas   Float
-  horasPendientes    Float
-  motivo             String?
-  creadoEn           DateTime     @default(now())
-  actualizadoEn      DateTime     @updatedAt
+  id                      Int      @id @default(autoincrement())
+  registroId              Int      @unique
+  registro                Registro @relation(fields: [registroId], references: [id])
+  empleadoId              Int
+  empleado                Empleado @relation(fields: [empleadoId], references: [id])
+  
+  // Banco de Tiempo
+  horasGeneradas          Float    // Total de horas extra generadas por este registro
+  saldoPendienteTiempo    Float    // Saldo disponible (horasGeneradas - SUMA(usos))
+  
+  // Liquidación Final
+  estadoCierre            EstadoLiquidacion @default(PENDIENTE_DE_CIERRE)
+  horasLiquidadasEnDinero Float    @default(0.0) // Saldo que se paga en efectivo
+  fechaCierre             DateTime? 
+
+  motivo                  String?
+  
+  // Relación a las instancias de uso (las "restas" o transacciones)
+  usos                    UsoCompensatorio[] 
+  
+  creadoEn                DateTime @default(now())
+  actualizadoEn           DateTime @updatedAt
+}
+
+model UsoCompensatorio {
+  id                      Int      @id @default(autoincrement())
+  
+  // Referencia al banco de horas del cual se está restando (Compensatorio)
+  compensatorioId         Int
+  compensatorio           Compensatorio @relation(fields: [compensatorioId], references: [id])
+  
+  fechaUso                DateTime @db.Date // << La fecha de reclamación/uso
+  horasUtilizadasInstancia Float    // << La cantidad de horas a reclamar/usar
+  motivoUso               String?
+  
+  creadoEn                DateTime @default(now())
+  actualizadoEn           DateTime @updatedAt
 }
