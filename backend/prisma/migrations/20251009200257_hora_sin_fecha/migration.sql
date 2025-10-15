@@ -1,4 +1,0 @@
--- AlterTable
-ALTER TABLE "Horario" ALTER COLUMN "horaInicio" SET DATA TYPE TIME(3),
-ALTER COLUMN "horaFin" SET DATA TYPE TIME(3),
-ALTER COLUMN "horaDescanso" SET DATA TYPE TIME(3);
