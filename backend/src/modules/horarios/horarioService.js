@@ -2,18 +2,7 @@ import prisma from '../../shared/prisma/prismaClient.js';
 
 //Obtener todos los Horarios activos
 const getAllHorarios = async () => {
-    return await prisma.horario.findMany({ 
-        where: { 
-            activo: true 
-        },
-        include: { 
-            turno: { 
-                select: { 
-                    tipoTurno: true 
-                }
-            } 
-        } 
-    });
+    return await prisma.horario.findMany();
 };
 //Crear Horario
 const createHorario = async (data) => {
@@ -27,20 +16,16 @@ const getHorarioById = async (id) => {
 const updateHorario = async (id, data) => {
   return await prisma.horario.update({ where: { id: parseInt(id) }, data });
 };
-// Desactivar Horario (en vez de eliminarlo)
+// Eliminar Horario
 const deleteHorario = async (id) => {
-  return await prisma.horario.update({
-    where: { id: id },
-    data: { activo: false },
+  return await prisma.horario.delete({
+    where: { id: id }
   });
 };
 
 const getHorarioByTurno = async ( turnoId ) => {
-    const horarios = await prisma.horario.findMany({
-      where: { 
-            turnoId: parseInt(turnoId),
-        }
-    })
+    // Since there's no turno relationship in the schema, return all horarios for now
+    const horarios = await prisma.horario.findMany();
     return horarios;
 };
 

@@ -3,7 +3,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import empleadosRoutes from './routes/empleados.js';
 import areasRoutes from './routes/areas.js';
-
+import usuarioRoutes from './routes/usuarios.js';
 import horariosRoutes from './routes/horarios.js';
 
 import registrosRoutes from './routes/registros.js';
@@ -17,6 +17,7 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 // Rutas
+app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/empleados', empleadosRoutes);
 app.use('/api/areas', areasRoutes);
 app.use('/api/horarios', horariosRoutes);

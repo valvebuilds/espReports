@@ -1,5 +1,5 @@
 import { Usuario } from './Usuario.js';
-import { InvalidCredentialsError, UserAlreadyExistsError, UserNotFoundError } from './authErrors.js'
+import { InvalidCredentialsError, UserAlreadyExistsError, UserNotFoundError, AreaNotFoundError } from './authErrors.js'
 import { TokenProvider } from './TokenService.js';
 import { PasswordProvider } from './PasswordProvider.js'
 import { UsuarioRepository } from './UsuarioRepository.js';
@@ -12,10 +12,10 @@ export class AuthService {
 
   async register(username, password, name, role) {
     const existing = await usuarioRepository.findByUsername(username);
-    if (existing) throw new UserAlreadyExistsError('Usuario ya existe');
-
+    if (existingUser) {
+      return res.status(400).json({ error: "User already exists" });
+    }
     const hash = await passwordProvider.hashPassword(password);
-
     const user = await usuarioRepository.create({
       username, 
       passwordHash: hash, 
@@ -28,7 +28,7 @@ export class AuthService {
       role: user.role,
     };
     const token = tokenProvider.generateToken(tokenPayload);
-
+    res.json = user;
     return { user, token };
   }
 
@@ -51,5 +51,11 @@ export class AuthService {
     const user = await usuarioRepository.findById(id);
     if (!user) throw new UserNotFoundError('Usuario no encontrado');
     return user;
+  }
+
+  async findUserArea(id) {
+    const area = await usuarioRepository.findUserArea(id);
+    if (!area) throw new AreaNotFoundError('Área no encontrada para el coordinador');
+    return area.nombre; 
   }
 }

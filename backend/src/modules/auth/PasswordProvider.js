@@ -6,7 +6,6 @@ export class PasswordProvider {
   }
 
   async comparePassword(password, hash) {
-    console.log(password, hash);
     return bcrypt.compare(password, hash);
   }
 }

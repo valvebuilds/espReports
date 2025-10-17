@@ -5,11 +5,34 @@ import horarioService from '../horarios/horarioService.js';
 
 //Obtener todos los Registros activos
 const getAllRegistros = async () => {
-  return await prisma.registro.findMany();
+  try {
+    const registros = await prisma.horaExtra.findMany({
+      include: {
+        empleado: {
+          include: {
+            area: true
+          }
+        }
+      }
+    });
+    return registros;
+  } catch (error) {
+    console.error('Error in getAllRegistros:', error);
+    throw error;
+  }
 };
 //Crear Registro
 const createRegistro = async (data) => {
-  return await prisma.registro.create({ data });
+  return await prisma.horaExtra.create({ 
+    data,
+    include: {
+      empleado: {
+        include: {
+          area: true
+        }
+      }
+    }
+  });
 };
 
 const calcularHorasExtra = async (data) =>{
@@ -100,15 +123,34 @@ const dummyData = {
 
 //Obtener Registro por id
 const getRegistroById = async (id) => {
-  return await prisma.registro.findUnique({ where: { id: id } });
+  return await prisma.horaExtra.findUnique({ 
+    where: { id: id },
+    include: {
+      empleado: {
+        include: {
+          area: true
+        }
+      }
+    }
+  });
 };
 //Actualizar Registro
 const updateRegistro = async (id, data) => {
-  return await prisma.registro.update({ where: { id: id }, data });
+  return await prisma.horaExtra.update({ 
+    where: { id: id }, 
+    data,
+    include: {
+      empleado: {
+        include: {
+          area: true
+        }
+      }
+    }
+  });
 };
 // Desactivar Registro (en vez de eliminarlo)
 const deleteRegistro = async (id) => {
-  return await prisma.registro.delete({ where: { id: id },});
+  return await prisma.horaExtra.delete({ where: { id: id } });
 };
 
 
