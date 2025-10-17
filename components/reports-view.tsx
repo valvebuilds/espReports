@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { getCurrentUser, getTimeRecords, deleteTimeRecord, type TimeRecord, type User } from "@/lib/storage"
-import { getRoleName } from "@/lib/auth"
+import { getCurrentUser } from "@/lib/storage"
+import { getTimeRecords, deleteTimeRecord, type TimeRecord } from "@/lib/timeRecords"
+import type { User } from "@/lib/users"
 import { FileText, Download, Trash2, Calendar, Filter } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -28,11 +29,15 @@ type ReportPeriod = "daily" | "weekly" | "monthly" | "custom"
 export function ReportsView() {
   const [user, setUser] = useState<User | null>(null)
   const { toast } = useToast()
+
   const [records, setRecords] = useState<TimeRecord[]>([])
   const [period, setPeriod] = useState<ReportPeriod>("daily")
+
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0])
   const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0])
+
   const [selectedArea, setSelectedArea] = useState<string>("all")
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [recordToDelete, setRecordToDelete] = useState<string | null>(null)
 
@@ -42,12 +47,21 @@ export function ReportsView() {
     loadRecords(currentUser)
   }, [])
 
-  const loadRecords = (currentUser: User | null = user) => {
-    const allRecords = getTimeRecords()
-    // Filter by user's area if not admin
-    const filteredRecords =
-      currentUser?.role === "admin" ? allRecords : allRecords.filter((r) => r.area === currentUser?.role)
-    setRecords(filteredRecords)
+  const loadRecords = async (currentUser: User | null = user) => {
+    try {
+      const allRecords = await getTimeRecords()
+      // Filter by user's area if not admin
+      const filteredRecords =
+        currentUser?.rol === "ADMIN" ? allRecords : allRecords.filter((r) => r.empleado.area.nombre.toLowerCase() === currentUser?.rol?.toLowerCase())
+      setRecords(filteredRecords)
+    } catch (error) {
+      console.error("Failed to load records:", error)
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los registros",
+        variant: "destructive",
+      })
+    }
   }
 
   const filteredRecords = useMemo(() => {
@@ -55,7 +69,7 @@ export function ReportsView() {
 
     // Filter by area
     if (selectedArea !== "all") {
-      filtered = filtered.filter((r) => r.area === selectedArea)
+      filtered = filtered.filter((r) => r.empleado.area.nombre.toLowerCase() === selectedArea)
     }
 
     // Filter by date range
@@ -63,11 +77,11 @@ export function ReportsView() {
     const end = new Date(endDate)
 
     filtered = filtered.filter((r) => {
-      const recordDate = new Date(r.date)
+      const recordDate = new Date(r.horaInicio)
       return recordDate >= start && recordDate <= end
     })
 
-    return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    return filtered.sort((a, b) => new Date(b.horaInicio).getTime() - new Date(a.horaInicio).getTime())
   }, [records, selectedArea, startDate, endDate])
 
   const totalHours = useMemo(() => {
@@ -105,14 +119,22 @@ export function ReportsView() {
     setDeleteDialogOpen(true)
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (recordToDelete) {
-      deleteTimeRecord(recordToDelete)
-      loadRecords()
-      toast({
-        title: "Registro eliminado",
-        description: "El registro ha sido eliminado correctamente",
-      })
+      try {
+        await deleteTimeRecord(parseInt(recordToDelete))
+        await loadRecords()
+        toast({
+          title: "Registro eliminado",
+          description: "El registro ha sido eliminado correctamente",
+        })
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "No se pudo eliminar el registro",
+          variant: "destructive",
+        })
+      }
     }
     setDeleteDialogOpen(false)
     setRecordToDelete(null)
@@ -130,14 +152,14 @@ export function ReportsView() {
       "Registrado Por",
     ]
     const rows = filteredRecords.map((r) => [
-      r.date,
-      r.workerName,
-      getRoleName(r.area),
-      r.startTime,
-      r.endTime,
+      new Date(r.horaInicio).toLocaleDateString("es-ES"),
+      r.empleado.nombre,
+      r.empleado.area.nombre,
+      new Date(r.horaInicio).toLocaleTimeString("es-ES", { hour: '2-digit', minute: '2-digit' }),
+      new Date(r.horaFin).toLocaleTimeString("es-ES", { hour: '2-digit', minute: '2-digit' }),
       r.totalHours.toString(),
-      r.description || "",
-      r.registeredBy,
+      r.observaciones || "",
+      r.estado,
     ])
 
     const csvContent = [headers.join(","), ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join("\n")
@@ -155,7 +177,7 @@ export function ReportsView() {
   }
 
   const getAreaBadgeColor = (area: string) => {
-    switch (area) {
+    switch (area.toLowerCase()) {
       case "acueducto":
         return "bg-blue-500"
       case "alcantarillado":
@@ -228,7 +250,7 @@ export function ReportsView() {
               <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
 
-            {user?.role === "admin" && (
+            {user?.rol === "ADMIN" && (
               <div className="space-y-2">
                 <Label>Área</Label>
                 <Select value={selectedArea} onValueChange={setSelectedArea}>
@@ -288,27 +310,27 @@ export function ReportsView() {
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {filteredRecords.map((record) => (
-                    <TableRow key={record.id}>
-                      <TableCell className="font-medium">{new Date(record.date).toLocaleDateString("es-ES")}</TableCell>
-                      <TableCell>{record.workerName}</TableCell>
-                      <TableCell>
-                        <Badge className={getAreaBadgeColor(record.area)}>{getRoleName(record.area)}</Badge>
-                      </TableCell>
-                      <TableCell>{record.startTime}</TableCell>
-                      <TableCell>{record.endTime}</TableCell>
-                      <TableCell className="font-semibold">{record.totalHours}h</TableCell>
-                      <TableCell className="max-w-xs truncate">{record.description || "-"}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{record.registeredBy}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(record.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+                  <TableBody>
+                    {filteredRecords.map((record) => (
+                      <TableRow key={record.id}>
+                        <TableCell className="font-medium">{new Date(record.horaInicio).toLocaleDateString("es-ES")}</TableCell>
+                        <TableCell>{record.empleado.nombre}</TableCell>
+                        <TableCell>
+                          <Badge className={getAreaBadgeColor(record.empleado.area.nombre)}>{record.empleado.area.nombre}</Badge>
+                        </TableCell>
+                        <TableCell>{new Date(record.horaInicio).toLocaleTimeString("es-ES", { hour: '2-digit', minute: '2-digit' })}</TableCell>
+                        <TableCell>{new Date(record.horaFin).toLocaleTimeString("es-ES", { hour: '2-digit', minute: '2-digit' })}</TableCell>
+                        <TableCell className="font-semibold">{record.totalHours}h</TableCell>
+                        <TableCell className="max-w-xs truncate">{record.observaciones || "-"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{record.estado}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(record.id.toString())}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
               </Table>
             </div>
           )}

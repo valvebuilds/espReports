@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { getCurrentUser, setCurrentUser } from "@/lib/storage"
-import { getRoleName } from "@/lib/auth"
 import { Clock, LogOut, FileText, Settings, PlusCircle } from "lucide-react"
 import { TimeRegistrationForm } from "@/components/time-registration-form"
 import { ReportsView } from "@/components/reports-view"
@@ -15,6 +14,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
   const user = getCurrentUser()
+  
   const [activeTab, setActiveTab] = useState<"register" | "reports" | "config">("register")
 
   if (!user) return null
@@ -35,9 +35,9 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
                 <Clock className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-xl font-bold">Sistema de Registro de Tiempo</h1>
+                <h1 className="text-xl font-bold">Horas Extra</h1>
                 <p className="text-sm text-muted-foreground">
-                  {user.name} - {getRoleName(user.role)}
+                  {user.name} - {user.role}
                 </p>
               </div>
             </div>
@@ -71,7 +71,7 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
               <FileText className="h-4 w-4 mr-2" />
               Reportes
             </Button>
-            {user.role === "admin" && (
+            {user.role === "ADMIN" && (
               <Button
                 variant={activeTab === "config" ? "default" : "ghost"}
                 className="rounded-none border-b-2 border-transparent data-[active=true]:border-primary"
@@ -90,7 +90,7 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
       <main className="container mx-auto px-4 py-6">
         {activeTab === "register" && <TimeRegistrationForm />}
         {activeTab === "reports" && <ReportsView />}
-        {activeTab === "config" && user.role === "admin" && <AdminConfig />}
+        {activeTab === "config" && user.role === "ADMIN" && <AdminConfig />}
       </main>
     </div>
   )

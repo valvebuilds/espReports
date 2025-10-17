@@ -1,56 +1,42 @@
-export type UserRole = "acueducto" | "alcantarillado" | "aseo" | "admin"
+import { User } from "./users";
+import { getToken, setCurrentUser } from "./storage";
+import { apiService } from "./api";
 
-export interface User {
-  id: string
-  username: string
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
+
+export async function authenticateUser(
+  username: string,
   password: string
-  role: UserRole
-  name: string
-}
+): Promise<AuthResponse | null> {
+  try {
+    const data: AuthResponse = await apiService.login(username, password);
 
-// Default users
-export const defaultUsers: User[] = [
-  {
-    id: "1",
-    username: "coord_acueducto",
-    password: "acueducto123",
-    role: "acueducto",
-    name: "Coordinador Acueducto",
-  },
-  {
-    id: "2",
-    username: "coord_alcantarillado",
-    password: "alcantarillado123",
-    role: "alcantarillado",
-    name: "Coordinador Alcantarillado",
-  },
-  {
-    id: "3",
-    username: "coord_aseo",
-    password: "aseo123",
-    role: "aseo",
-    name: "Coordinador Aseo",
-  },
-  {
-    id: "4",
-    username: "admin",
-    password: "admin123",
-    role: "admin",
-    name: "Administrador Master",
-  },
-]
+    // Store token + user data in localStorage
+    localStorage.setItem("authToken", data.token);
+    localStorage.setItem("authUser", JSON.stringify(data.user));
+    setCurrentUser(data.user);
 
-export const getRoleName = (role: UserRole): string => {
-  const roleNames: Record<UserRole, string> = {
-    acueducto: "Acueducto",
-    alcantarillado: "Alcantarillado",
-    aseo: "Aseo",
-    admin: "Administrador",
+    return data;
+  } catch (error) {
+    console.error("Authentication failed:", error);
+    return null;
   }
-  return roleNames[role]
 }
 
-export const authenticateUser = (username: string, password: string): User | null => {
-  const user = defaultUsers.find((u) => u.username === username && u.password === password)
-  return user || null
+export async function registerUser(
+  nombre: string,
+  usuario: string,
+  contrasena: string,
+  rol: string
+): Promise<User | null> {
+  try {
+    const newUser: User = await apiService.register(nombre, usuario, contrasena, rol);
+    return newUser;
+  } catch (error) {
+    console.error("Registration failed:", error);
+    return null;
+  }
 }

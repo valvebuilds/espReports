@@ -9,15 +9,10 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  getCurrentUser,
-  getWorkers,
-  saveTimeRecord,
-  calculateHours,
-  type Worker,
-  type TimeRecord,
-  type User,
-} from "@/lib/storage"
+import { getCurrentUser} from "@/lib/storage"
+import { User }from "@/lib/users"
+import { getEmployees, type Employee } from "@/lib/employees"
+import { createTimeRecord, calculateHours, type TimeRecord } from "@/lib/timeRecords"
 import { Clock, Save, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
@@ -25,8 +20,8 @@ import { useToast } from "@/hooks/use-toast"
 export function TimeRegistrationForm() {
   const [user, setUser] = useState<User | null>(null)
   const { toast } = useToast()
-  const [workers, setWorkers] = useState<Worker[]>([])
-  const [selectedWorker, setSelectedWorker] = useState("")
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [selectedEmployee, setSelectedEmployee] = useState("")
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [startTime, setStartTime] = useState("")
   const [endTime, setEndTime] = useState("")
@@ -38,20 +33,33 @@ export function TimeRegistrationForm() {
     const currentUser = getCurrentUser()
     setUser(currentUser)
 
-    const allWorkers = getWorkers()
-    const filteredWorkers =
-      currentUser?.role === "admin" ? allWorkers : allWorkers.filter((w) => w.area === currentUser?.role)
-    setWorkers(filteredWorkers)
-  }, [])
+    const loadEmployees = async () => {
+      try {
+        const allEmployees = await getEmployees()
+        const filteredEmployees =
+          currentUser?.rol === "ADMIN" ? allEmployees : allEmployees.filter((e) => e.area?.nombre?.toLowerCase() === currentUser?.rol?.toLowerCase())
+        setEmployees(filteredEmployees)
+      } catch (error) {
+        console.error("Failed to load employees:", error)
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los empleados",
+          variant: "destructive",
+        })
+      }
+    }
 
-  const handleSubmit = (e: React.FormEvent) => {
+    loadEmployees()
+  }, [toast])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setLoading(true)
 
     // Validation
-    if (!selectedWorker) {
-      setError("Debe seleccionar un trabajador")
+    if (!selectedEmployee) {
+      setError("Debe seleccionar un empleado")
       setLoading(false)
       return
     }
@@ -69,39 +77,42 @@ export function TimeRegistrationForm() {
       return
     }
 
-    const worker = workers.find((w) => w.id === selectedWorker)
-    if (!worker) {
-      setError("Trabajador no encontrado")
+    const employee = employees.find((e) => e.id.toString() === selectedEmployee)
+    if (!employee) {
+      setError("Empleado no encontrado")
       setLoading(false)
       return
     }
 
-    const record: TimeRecord = {
-      id: Date.now().toString(),
-      workerId: worker.id,
-      workerName: worker.name,
-      area: worker.area,
-      date,
-      startTime,
-      endTime,
-      totalHours,
-      description,
-      registeredBy: user?.name || "",
-      registeredAt: new Date().toISOString(),
+    try {
+      // Create datetime strings for the backend
+      const startDateTime = new Date(`${date}T${startTime}`).toISOString();
+      const endDateTime = new Date(`${date}T${endTime}`).toISOString();
+      
+      await createTimeRecord({
+        empleadoId: employee.id,
+        coordinadorId: user?.id || 1, // Use current user ID or default
+        horaInicio: startDateTime,
+        horaFin: endDateTime,
+        observaciones: description,
+        estado: "PENDIENTE",
+      })
+
+      toast({
+        title: "Registro guardado",
+        description: `Se registraron ${totalHours} horas para ${employee.nombre}`,
+      })
+
+      // Reset form
+      setSelectedEmployee("")
+      setStartTime("")
+      setEndTime("")
+      setDescription("")
+    } catch (error) {
+      setError("Error al guardar el registro. Intente nuevamente.")
+      console.error("Error saving time record:", error)
     }
 
-    saveTimeRecord(record)
-
-    toast({
-      title: "Registro guardado",
-      description: `Se registraron ${totalHours} horas para ${worker.name}`,
-    })
-
-    // Reset form
-    setSelectedWorker("")
-    setStartTime("")
-    setEndTime("")
-    setDescription("")
     setLoading(false)
   }
 
@@ -118,15 +129,15 @@ export function TimeRegistrationForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="worker">Trabajador *</Label>
-              <Select value={selectedWorker} onValueChange={setSelectedWorker}>
-                <SelectTrigger id="worker">
-                  <SelectValue placeholder="Seleccione un trabajador" />
+              <Label htmlFor="employee">Empleado *</Label>
+              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                <SelectTrigger id="employee">
+                  <SelectValue placeholder="Seleccione un empleado" />
                 </SelectTrigger>
                 <SelectContent>
-                  {workers.map((worker) => (
-                    <SelectItem key={worker.id} value={worker.id}>
-                      {worker.name}
+                  {employees.map((employee) => (
+                    <SelectItem key={employee.id} value={employee.id.toString()}>
+                      {employee.nombre} - {employee.area?.nombre}
                     </SelectItem>
                   ))}
                 </SelectContent>

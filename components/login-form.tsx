@@ -8,37 +8,37 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { authenticateUser } from "@/lib/auth"
+import { User } from "@/lib/users"
 import { setCurrentUser } from "@/lib/storage"
 import { Clock, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface LoginFormProps {
-  onLoginSuccess: () => void
+  onLoginSuccess: (user: User) => void
+  onLoginFailure: () => void
 }
 
-export function LoginForm({ onLoginSuccess }: LoginFormProps) {
+export function LoginForm({ onLoginSuccess, onLoginFailure } : LoginFormProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
     setLoading(true)
+    setError(null)
 
-    setTimeout(() => {
-      const user = authenticateUser(username, password)
+    const result = await authenticateUser(username, password)
+    
+    if (result) {
+      onLoginSuccess(result.user)
+    } else {
+      setError("Credenciales incorrectas. Por favor, verifique su usuario y contraseña.")
+      onLoginFailure()
+    }
 
-      if (user) {
-        setCurrentUser(user)
-        onLoginSuccess()
-      } else {
-        setError("Usuario o contraseña incorrectos")
-      }
-
-      setLoading(false)
-    }, 500)
+    setLoading(false)
   }
 
   return (
