@@ -1,4 +1,6 @@
+import { ca } from "date-fns/locale";
 import { apiService } from "./api";
+import { handleError } from "./errorHandler";
 
 export interface TimeRecord {
   id: number;
@@ -36,8 +38,18 @@ export async function getTimeRecords(): Promise<TimeRecord[]> {
   return apiService.getTimeRecords();
 }
 
-export async function createTimeRecord(recordData: CreateTimeRecordData): Promise<TimeRecord> {
-  return apiService.createTimeRecord(recordData);
+export async function createTimeRecord(recordData: CreateTimeRecordData): Promise<TimeRecord | null> {
+  try{
+    const response = await apiService.createTimeRecord(recordData);
+    if (response.success) {
+      const data: TimeRecord = (response.data);
+      return data;
+    }
+  }
+  catch (error) { 
+    handleError(error);
+    return null;
+  }
 }
 
 export async function getTimeRecordById(id: number): Promise<TimeRecord> {

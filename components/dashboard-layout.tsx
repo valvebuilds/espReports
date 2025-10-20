@@ -6,7 +6,7 @@ import { getCurrentUser, setCurrentUser } from "@/lib/storage"
 import { Clock, LogOut, FileText, Settings, PlusCircle } from "lucide-react"
 import { TimeRegistrationForm } from "@/components/time-registration-form"
 import { ReportsView } from "@/components/reports-view"
-import { AdminConfig } from "@/components/admin-config"
+import { AdminConfig } from "./admin-config"
 
 interface DashboardLayoutProps {
   onLogout: () => void
@@ -14,7 +14,6 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
   const user = getCurrentUser()
-  
   const [activeTab, setActiveTab] = useState<"register" | "reports" | "config">("register")
 
   if (!user) return null
@@ -49,7 +48,7 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
         </div>
       </header>
 
-      {/* Navigation */}
+      {/* Navegación */}
       <nav className="border-b bg-card">
         <div className="container mx-auto px-4">
           <div className="flex gap-1">
@@ -86,7 +85,7 @@ export function DashboardLayout({ onLogout }: DashboardLayoutProps) {
         </div>
       </nav>
 
-      {/* Content */}
+      {/* Contenido */}
       <main className="container mx-auto px-4 py-6">
         {activeTab === "register" && <TimeRegistrationForm />}
         {activeTab === "reports" && <ReportsView />}

@@ -11,6 +11,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // obtener el usuario y el token del localStorage
   useEffect(() => {
     const token = getToken()
     const storedUser = getCurrentUser()
@@ -20,11 +21,12 @@ export default function Home() {
     setIsLoading(false)
   }, [])
 
+  // manejar el éxito de la autenticación
  const handleLoginSuccess = (userData: any) => {
     setUser(userData)
     setError(null)
   }
-
+// manejar el fallo de la autenticación
   const handleLoginFailure = () => {
     setError("Credenciales inválidas. Inténtalo de nuevo.")
   }
@@ -41,7 +43,7 @@ export default function Home() {
       </div>
     )
   }
-
+// si no hay usuario, mostrar el formulario de login
   if (!user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">

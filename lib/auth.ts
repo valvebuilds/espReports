@@ -12,16 +12,16 @@ export async function authenticateUser(
   password: string
 ): Promise<AuthResponse | null> {
   try {
-    const data: AuthResponse = await apiService.login(username, password);
-
+    const response = await apiService.login(username, password);
+    const data : AuthResponse = (response.data);
+    if (response.success) {
     // Store token + user data in localStorage
     localStorage.setItem("authToken", data.token);
     localStorage.setItem("authUser", JSON.stringify(data.user));
     setCurrentUser(data.user);
-
     return data;
+    }
   } catch (error) {
-    console.error("Authentication failed:", error);
     return null;
   }
 }

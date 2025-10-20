@@ -27,20 +27,30 @@ export function TimeRegistrationForm() {
   const [endTime, setEndTime] = useState("")
   const [description, setDescription] = useState("")
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const currentUser = getCurrentUser()
+    console.log(currentUser);
     setUser(currentUser)
 
     const loadEmployees = async () => {
       try {
-        const allEmployees = await getEmployees()
+        const allEmployees = currentUser?.role ==="COORDINADOR"
+        ? await getEmployees(currentUser.area) 
+        : await getEmployees();
+        console.log(allEmployees);  
         const filteredEmployees =
-          currentUser?.rol === "ADMIN" ? allEmployees : allEmployees.filter((e) => e.area?.nombre?.toLowerCase() === currentUser?.rol?.toLowerCase())
-        setEmployees(filteredEmployees)
+          currentUser?.role === "ADMIN"
+            ? allEmployees
+            : allEmployees.filter(
+                (e) =>
+                  (e.area?.nombre ?? "").toLowerCase() ===
+                  (currentUser?.area?.nombre ?? "").toLowerCase()
+              )
+        setEmployees(filteredEmployees??[])
       } catch (error) {
-        console.error("Failed to load employees:", error)
+        console.error("Fallo cargando empleados:", error)
         toast({
           title: "Error",
           description: "No se pudieron cargar los empleados",
@@ -54,7 +64,7 @@ export function TimeRegistrationForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
+    setError(null)
     setLoading(true)
 
     // Validation
@@ -85,13 +95,13 @@ export function TimeRegistrationForm() {
     }
 
     try {
-      // Create datetime strings for the backend
+      // crear strings ISO para hora de inicio y fin
       const startDateTime = new Date(`${date}T${startTime}`).toISOString();
       const endDateTime = new Date(`${date}T${endTime}`).toISOString();
       
       await createTimeRecord({
         empleadoId: employee.id,
-        coordinadorId: user?.id || 1, // Use current user ID or default
+        coordinadorId: user?.id || 1, // usar id del usuario actual o 1 por defecto
         horaInicio: startDateTime,
         horaFin: endDateTime,
         observaciones: description,
@@ -121,9 +131,9 @@ export function TimeRegistrationForm() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Clock className="h-5 w-5" />
-          Registrar Tiempo Adicional
+          Registrar Tiempo Extra
         </CardTitle>
-        <CardDescription>Complete el formulario para registrar las horas adicionales trabajadas</CardDescription>
+        <CardDescription>Complete el formulario para registrar las horas extra trabajadas</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -137,7 +147,7 @@ export function TimeRegistrationForm() {
                 <SelectContent>
                   {employees.map((employee) => (
                     <SelectItem key={employee.id} value={employee.id.toString()}>
-                      {employee.nombre} - {employee.area?.nombre}
+                      {employee.nombre}
                     </SelectItem>
                   ))}
                 </SelectContent>
