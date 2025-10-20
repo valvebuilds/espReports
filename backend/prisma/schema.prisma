@@ -45,6 +45,7 @@ model Usuario {
   area         Area?
   creadoEn      DateTime  @default(now())
   actualizadoEn DateTime @updatedAt
+
 }
 
 model Area {
@@ -53,6 +54,8 @@ model Area {
   coordinadorId Int        @unique
   coordinador   Usuario    @relation(fields: [coordinadorId],  references: [id])
   empleados     Empleado[]
+  turnoIds      Int[]     
+  turnos        Turno[]     
   creadoEn      DateTime    @default(now())
   actualizadoEn DateTime    @updatedAt
 }
@@ -63,27 +66,62 @@ model Empleado {
   cedula         String          @unique
   areaId         Int             
   area           Area            @relation(fields: [areaId], references: [id])
-  horasExtra     horaExtra[] 
-  horario        Horario?        @relation(fields: [horarioId], references: [id])
-  horarioId      Int             
+
+  horasExtra     horaExtra[]  //registros de horas extra
+  asignadosId     Int[]
+  turnosAsignados Asignacion[]  //turnos asignados al empleado
+        
   activo         Boolean         @default(true)
   creadoEn       DateTime        @default(now())
   actualizadoEn  DateTime        @updatedAt
 }
 
+///----------------------------------------------------
+// TURNOS Y ASIGNACIONES
+//----------------------------------------------------
+model Turno {
+id              Int    @id @default(autoincrement()) 
+areaId          Int   
+area            Area   @relation(fields: [areaId],references: [id], onDelete: Cascade)
+nombre          String  @db.VarChar(100)
+activo          Boolean @default(true)
+fechaCreacion   DateTime  @default(now()) 
+horarioIds      Int[]
+horarios        Horario[]       
+asignaciones    Asignacion[]
+}
+
+model Asignacion {
+id              Int    @id @default(autoincrement())
+empleadoId      Int            
+empleado        Empleado          @relation(fields: [empleadoId], references: [id], onDelete: Cascade)    
+turnoId         Int                
+turno           Turno              @relation(fields: [turnoId], references: [id], onDelete: Restrict)
+fechaInicio     DateTime           
+fechaFin        DateTime?          // NULL si sigue asignado
+fechaCreacion   DateTime           @default(now()) 
+}
 // ----------------------------------------------------
 // HORARIOS Y FESTIVOS
 // ----------------------------------------------------
 
 model Horario {
   id              Int        @id @default(autoincrement())
-  nombre          String
+  turnoId       Int         
+  turno         Turno      @relation(fields: [turnoId], references: [id], onDelete: Cascade)
+  
   diaSemana       DiaSemana
   horaInicio      DateTime
   horaFin         DateTime
   descansoInicio  DateTime?
   descansoFin     DateTime? 
-  empleados       Empleado[]
+  minutosDescanso  Int  @default(105)
+  minutosLaborales Int @default(465)
+  
+  activo          Boolean    @default(true)
+  creadoEn        DateTime   @default(now())
+  actualizadoEn   DateTime   @updatedAt
+            
 }
 
 model Festivo {

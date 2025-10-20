@@ -1,3 +1,7 @@
+/**
+ * middleware de verificación de roles
+ * verifica si el usuario tiene el rol permitido
+ */
 export function requireRole(...rolesPermitidos) {
   return (req, res, next) => {
     if (!req.user) {

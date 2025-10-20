@@ -1,16 +1,22 @@
 import express from 'express';
-import usuarioController from '../../modules/auth/users/usuarioController.js';
+import { UsuarioController } from '../../modules/auth/controllers/UsuarioController.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roles.js';
+import { requireArea } from '../middleware/areas.js';
 
 const router = express.Router();
+const usuarioController = new UsuarioController();
 
-// Define routes
-router.get('/', requireAuth, requireRole('ADMIN'), usuarioController.getAllUsuarios);
-router.post('/', requireAuth, requireRole('ADMIN'), usuarioController.createUsuario);
-router.put('/:id', requireAuth, requireRole('ADMIN'), usuarioController.updateUsuario);
-router.delete('/:id', requireAuth, requireRole('ADMIN'), usuarioController.deleteUsuario);
+// Admin routes
+router.get('/', requireAuth, requireRole('ADMIN'), usuarioController.getAllUsers);
+router.post('/', requireAuth, requireRole('ADMIN'), usuarioController.createUser);
+router.put('/:id', requireAuth, requireRole('ADMIN'), usuarioController.updateUser);
+router.delete('/:id', requireAuth, requireRole('ADMIN'), usuarioController.deactivateUser);
+router.put('/:id/asignar-area', requireAuth, requireRole('ADMIN'), usuarioController.assignAreaToUser);
 
-router.put('/:id/asignar-area', requireAuth, requireRole('ADMIN'), usuarioController.asignarAreaAUsuario);
+// Coordinator routes
+router.get('/area', requireAuth, requireRole('COORDINADOR', requireArea), usuarioController.getUsersByAreaIds);
+router.get('/area/:id', requireAuth, requireRole('COORDINADOR', requireArea), usuarioController.getUserByIdWithAreaRestriction);
+router.get('/managed-areas', requireAuth, requireRole('COORDINADOR', requireArea), usuarioController.getUserManagedAreas);
 
-export default router
+export default router;

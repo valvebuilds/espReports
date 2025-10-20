@@ -1,5 +1,8 @@
 import jwt from 'jsonwebtoken';
-
+/**
+ * middleware de autenticación
+ * verifica si el usuario está autenticado y si el token es válido
+ */
 export function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'No autorizado' });
